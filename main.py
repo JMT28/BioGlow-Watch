@@ -198,4 +198,100 @@ def nova_ocorrencia():
 
     if request.method == "POST":
 
-        tipo = request.form["
+        tipo = request.form["tipo"]
+        descricao_usuario = request.form["descricao"]
+        foto = request.files["foto"]
+
+        latitude = request.form.get("latitude")
+        longitude = request.form.get("longitude")
+
+        caminho_foto = os.path.join(
+            UPLOAD_FOLDER,
+            foto.filename
+        )
+
+        foto.save(caminho_foto)
+
+        risco, nivel, parecer_ia = analisar_imagem_com_ia(
+            caminho_foto
+        )
+
+        descricao_final = (
+            f"{descricao_usuario} "
+            f"(IA: {parecer_ia})"
+        )
+
+        conexao = sqlite3.connect("bioglow.db")
+        cursor = conexao.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO ocorrencias
+            (tipo, descricao, foto, latitude, longitude)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                tipo,
+                descricao_final,
+                foto.filename,
+                latitude,
+                longitude
+            )
+        )
+
+        conexao.commit()
+        conexao.close()
+
+        return render_template(
+            "resultado.html",
+            tipo=tipo,
+            descricao=descricao_final,
+            foto=foto.filename,
+            latitude=latitude,
+            longitude=longitude,
+            risco=risco,
+            nivel=nivel
+        )
+
+    return render_template("nova-ocorrencia.html")
+
+
+@app.route("/ocorrencias")
+def ocorrencias():
+    conexao = sqlite3.connect("bioglow.db")
+    conexao.row_factory = sqlite3.Row
+
+    ocorrencias = conexao.execute(
+        "SELECT * FROM ocorrencias"
+    ).fetchall()
+
+    conexao.close()
+
+    return render_template(
+        "ocorrencias.html",
+        ocorrencias=ocorrencias
+    )
+
+
+@app.route("/uploads/<nome_arquivo>")
+def mostrar_foto(nome_arquivo):
+    return send_from_directory(
+        UPLOAD_FOLDER,
+        nome_arquivo
+    )
+
+
+@app.route("/mapa")
+def mapa():
+    return render_template("mapa.html")
+
+
+if __name__ == "__main__":
+    criar_banco()
+    adicionar_localizacao()
+
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5004)),
+        debug=False
+    )
