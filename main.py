@@ -52,7 +52,7 @@ def analisar_imagem_com_ia(caminho_imagem):
         "Análise por IA indisponível no momento. Análise manual necessária"
     )
 
-        if len(partes) >= 3:
+    if len(partes) >= 3:
             risco = int(partes[0].strip())
             nivel = partes[1].strip()
             parecer = partes[2].strip()
