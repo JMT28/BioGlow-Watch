@@ -3,7 +3,6 @@ import os
 import sqlite3
 import requests  # Para buscar o clima
 from PIL import Image
-import google.generativeai as genai
 
 app = Flask(__name__)
 
@@ -11,8 +10,6 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Substitua pela sua chave do Google AI Studio
-GEMINI_API_KEY = "133-217-875"
-genai.configure(api_key=GEMINI_API_KEY)
 
 
 def criar_banco():
@@ -49,22 +46,11 @@ def adicionar_localizacao():
 
 
 def analisar_imagem_com_ia(caminho_imagem):
-    """
-    Envia a foto para o Gemini para gerar um laudo automático do risco.
-    """
-    try:
-        imagem = Image.open(caminho_imagem)
-        modelo = genai.GenerativeModel('gemini-1.5-flash')
-
-        prompt = (
-            "Você é um especialista em geologia do aplicativo BioGlow Watch. "
-            "Analise esta foto em busca de riscos como rachaduras, erosão, alagamentos ou deslizamentos. "
-            "Responda estritamente no formato: NOTA|NIVEL|PARECER "
-            "Exemplo: '85|Alto Risco|Identificada rachadura profunda na encosta com risco de deslizamento.'"
-        )
-
-        resposta = modelo.generate_content([prompt, imagem])
-        partes = resposta.text.strip().split('|')
+    return (
+        50,
+        "Risco Moderado",
+        "Análise por IA indisponível no momento. Análise manual necessária"
+    )
 
         if len(partes) >= 3:
             risco = int(partes[0].strip())
