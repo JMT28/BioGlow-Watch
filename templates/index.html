@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Início - BioGlow Watch</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #000010;
+        }
+
+        #mapa {
+            height: 400px;
+            width: 92.5%;
+            margin: 20px auto;
+            border-radius: 10px;
+            z-index: 10;
+            bottom: 40px;
+        }
+
+        /* --- CARTÕES SUPERIORES --- */
+        .cartao-detalhe-risco {
+            border-radius: 8px;
+            background-color: #222;
+            color: #fff;
+            text-align: center;
+            width: 125px;
+            height: 90px;
+            position: fixed;
+            bottom: 120px;
+            left: 25px;
+            z-index: 1000;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.4);
+            border: 1px solid #444;
+        }
+
+        .cartao-detalhe-risco p {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .cartao-clima {
+            border-radius: 8px;
+            background-color: #1e293b;
+            color: #fff;
+            text-align: center;
+            width: 125px;
+            position: fixed;
+            bottom: 120px;
+            right: 25px;
+            height: 90px;
+            z-index: 1000;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.4);
+            border: 1px solid #334155;
+        }
+
+        .cartao-clima p {
+            margin: 0;
+            font-size: 11px;
+        }
+
+        /* CARTÃO STATUS (INFERIOR) */
+        .cartao-status {
+            padding: 10px 14px;
+            border-radius: 8px;
+            background-color: #222;
+            color: white;
+            text-align: center;
+            width: 100px;
+            height: 70px;
+            position: fixed;
+            bottom: 15px;
+            left: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+            border: 1px solid #444;
+        }
+
+        .cartao-status h3 {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        /* CORES DO ÍCONE */
+        .icone-risco {
+            font-size: 24px;
+            margin-right: 6px;
+        }
+
+        .icone-seguro { color: #28a745 !important; }
+        .icone-atencao { color: #ffc107 !important; }
+        .icone-alerta { color: #ffa500 !important; }
+        .icone-emergencia { color: #dc3545 !important; }
+
+        /* BOTÃO OCORRÊNCIA */
+        .btn-ocorrencia {
+            width: 125px;
+            height: 90px;
+            position: fixed;
+            bottom: 15px;
+            right: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            background-color: #000045;
+            color: white;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+            border: 1px solid #334;
+        }
+
+        .retanguloabaixo {
+            height: 220px;
+            width: 500px;
+            right: 10px;
+            bottom: 5px;
+            background-color: #000025;
+            position: fixed;
+            border-radius: 8px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .retanguloacima {
+            height: 220px;
+            width: 450px;
+            right: 0px;
+            bottom: 450px;
+            background-color: #000025;
+            position: fixed;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: -1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1 style="text-align: center;">
+        <img src="{{ url_for('static', filename='logotipo.png') }}" style="height: 75px; position: relative; top: -25px;">
+    </h1>
+
+    <!-- MAPA -->
+    <div id="mapa"></div>
+
+    <!-- CARTÃO SUPERIOR 1: TIPO DE RISCO -->
+    <div class="cartao-detalhe-risco">
+        <h5>{{ tipo_risco_texto | safe }}</h5>
+    </div>
+
+    <!-- CARTÃO SUPERIOR 2: CLIMA ATUAL -->
+    <div class="cartao-clima">
+        <h5>{{ clima_atual | safe }}</h5>
+    </div>
+
+    <!-- AVISO INFERIOR: STATUS DA ÁREA COM ÍCONE COLORIDO -->
+    <div class="cartao-status">
+        <h3>
+            <span class="icone-risco icone-{{ cor_classe }}">⚠</span>
+            <br>{{ status }}
+        </h3>
+    </div>
+
+    <div class="retanguloabaixo"></div>
+    <div class="retanguloacima"></div>
+
+    <!-- BOTÃO NOVA OCORRÊNCIA -->
+    <a href="/nova-ocorrencia">
+        <button class="btn-ocorrencia">
+            <h1>📷</h1>
+        </button>
+    </a>
+
+    <!-- SCRIPTS LEAFLET & NOTIFICAÇÕES AUTOMÁTICAS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Função responsável por enviar a notificação para o sistema operacional / navegador
+        function enviarNotificacaoAutomatica() {
+            const statusAtual = "{{ status }}";
+
+            // Só dispara se o status vindo do Python/Flask for 'Emergência'
+            if (statusAtual === "Emergência") {
+                const titulo = "🚨 ALERTA DE EMERGÊNCIA - BioGlow";
+                const opcoes = {
+                    body: "Atenção: A sua região atingiu o nível crítico de risco!",
+                    icon: "{{ url_for('static', filename='logotipo.png') }}"
+                };
+
+                try {
+                    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                        navigator.serviceWorker.ready.then(registration => {
+                            registration.showNotification(titulo, opcoes);
+                        });
+                    } else {
+                        new Notification(titulo, opcoes);
+                    }
+                } catch (e) {
+                    console.error("Erro no envio da notificação:", e);
+                }
+            }
+        }
+
+        // Execução Automática assim que o navegador lê o código
+        (function verificarEAtivarNotificacao() {
+            if ("Notification" in window) {
+                if (Notification.permission === "granted") {
+                    // Se já foi autorizado antes, dispara imediatamente sem clique
+                    enviarNotificacaoAutomatica();
+                } else if (Notification.permission === "default") {
+                    // Se ainda não respondeu, solicita a permissão automaticamente
+                    Notification.requestPermission().then(permission => {
+                        if (permission === "granted") {
+                            enviarNotificacaoAutomatica();
+                        }
+                    });
+                }
+            }
+        })();
+
+        // Inicialização do Mapa Leaflet
+        const mapa = L.map("mapa").setView([-22.28, -42.53], 13);
+
+        L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+            attribution: "Tiles &copy; Esri"
+        }).addTo(mapa);
+
+        const iconeVermelho = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        // Marcadores do Banco de Dados
+        {% for ocorrencia in ocorrencias %}
+            {% if ocorrencia[4] and ocorrencia[5] %}
+                L.marker(
+                    [{{ ocorrencia[4] }}, {{ ocorrencia[5] }}],
+                    { icon: iconeVermelho }
+                )
+                .addTo(mapa)
+                .bindPopup(
+                    "<div style='text-align: center; max-width: 200px;'>" +
+                        "<strong>📍 {{ ocorrencia[1] | capitalize }}</strong><br><br>" +
+                        "{% if ocorrencia[3] %}" +
+                            "<img src='/uploads/{{ ocorrencia[3] }}' style='width: 100%; height: 120px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;'><br>" +
+                        "{% endif %}" +
+                        "<strong>Descrição:</strong><br>{{ ocorrencia[2] }}<br><br>" +
+                        "<small style='color: #666;'>" +
+                            "Lat: {{ ocorrencia[4] }} | Long: {{ ocorrencia[5] }}" +
+                        "</small>" +
+                    "</div>"
+                );
+            {% endif %}
+        {% endfor %}
+    </script>
+</body>
+
+</html>

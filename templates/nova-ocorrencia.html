@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Nova ocorrência - BioGlow Watch</title>
+</head>
+
+<body>
+
+    <h1>Nova ocorrência</h1>
+
+    <form action="/nova-ocorrencia" method="POST" enctype="multipart/form-data">
+        <input type="hidden" id="latitude" name="latitude">
+        <input type="hidden" id="longitude" name="longitude">
+        <label for="tipo">Tipo de ocorrência:</label>
+        <select id="tipo" name="tipo">
+            <option value="rachadura">Rachadura</option>
+            <option value="alagamento">Alagamento</option>
+            <option value="erosao">Erosão</option>
+            <option value="deslizamento">Deslizamento</option>
+            <option value="vegetacao">Falta de vegetação</option>
+        </select>
+        <br><br>
+
+        <label for="descricao">Descrição:</label>
+        <br>
+        <textarea id="descricao" name="descricao"
+                  placeholder="Descreva o que você observou"></textarea>
+
+        <br><br>
+
+        <label for="foto">Foto:</label>
+        <input type="file" id="foto" name="foto" accept="image/*">
+        <p id="status-localizacao">Obtendo localização...</p>
+        <br><br>
+
+<button type="submit">Registrar ocorrência</button>
+    </form>
+    <script>
+
+        if (navigator.geolocation) {
+
+            navigator.geolocation.getCurrentPosition(
+                function(posicao) {
+
+                    const latitude = posicao.coords.latitude;
+                    const longitude = posicao.coords.longitude;
+
+                    document.getElementById("latitude").value = latitude;
+                    document.getElementById("longitude").value = longitude;
+
+                    document.getElementById("status-localizacao").textContent =
+                        "📍 Localização obtida!";
+
+                },
+
+                function(erro) {
+
+                    document.getElementById("status-localizacao").textContent =
+                        "⚠️ Não foi possível obter a localização.";
+
+                }
+            );
+
+        } else {
+
+            document.getElementById("status-localizacao").textContent =
+                "⚠️ Este navegador não suporta localização.";
+
+        }
+
+    </script>
+</body>
+</html>

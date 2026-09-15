@@ -1,5 +1,38 @@
+modules = ["python-3.11"]
 [nix]
 channel = "stable-25_05"
 
 [agent]
 expertMode = true
+
+[workflows]
+
+[[workflows.workflow]]
+name = "Executar Python"
+mode = "sequential"
+author = 54046000
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 main.py"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Executar Python"
+
+[[ports]]
+localPort = 5003
+externalPort = 80
+
+[[ports]]
+localPort = 5004
+externalPort = 3000
+
+[deployment]
+deploymentTarget = "cloudrun"
+
+[deployment.run]
+args = ["sh", "-c", "/nix/store/s4ckxp77ljlikarkka88ba7qr5mlka97-python3-wrapper/bin/python3 $file"]
+
+[deployment.run.env]
+file = "main.py"

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ocorrência registrada - BioGlow Watch</title>
+</head>
+
+<body>
+
+    <h1> Ocorrência registrada!</h1>
+
+    <h2>Dados da ocorrência</h2>
+
+    <p><strong>Tipo:</strong> {{ tipo }}</p>
+
+    <p><strong>Descrição:</strong> {{ descricao }}</p>
+
+    <p><strong>Localização:</strong></p>
+    <p>Latitude: {{ latitude }}</p>
+    <p>Longitude: {{ longitude }}</p>
+
+    <h2>⚠️ Risco:{{ risco }}/100</h2>
+    <p>{{nivel}}</p>
+
+
+    <h2> Foto</h2>
+
+    <p>Arquivo: {{ foto }}</p>
+<img src="/uploads/{{ foto }}" width="400px">
+
+    <br>
+
+    <a href="/">
+        <button>Voltar para o menu</button>
+    </a>
+
+</body>
+
+</html>
