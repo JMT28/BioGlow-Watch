@@ -22,17 +22,16 @@ externalPort = 80
 localPort = 5005
 externalPort = 3000
 
+[[ports]]
+localPort = 5006
+externalPort = 3001
+
 [workflows]
 
 [[workflows.workflow]]
-name = "Executar Python "
+name = "Executar Python"
 mode = "sequential"
-author = 54046000
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python3 main.py"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Executar Python "
+args = "python3 -u main.py"

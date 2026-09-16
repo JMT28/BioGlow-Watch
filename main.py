@@ -52,7 +52,7 @@ def adicionar_localizacao():
 
 
 def analisar_imagem_com_ia(caminho_imagem):
-    print("GEMINI FOI CHAMADA!")
+    print("GEMINI FOI CHAMADA!", flush=True)
     
     chave = os.getenv("GEMINI_API_KEY")
 
@@ -347,6 +347,6 @@ if __name__ == "__main__":
 
     app.run(
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5005)),
+        port=int(os.environ.get("PORT", 5006)),
         debug=False
     )
