@@ -1,24 +1,9 @@
-modules = ["python-3.11"]
+modules = ["web", "python-3.11", "nodejs-20"]
 [nix]
 channel = "stable-25_05"
 
 [agent]
 expertMode = true
-
-[workflows]
-
-[[workflows.workflow]]
-name = "Executar Python"
-mode = "sequential"
-author = 54046000
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "python3 main.py"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Executar Python"
 
 [deployment]
 deploymentTarget = "cloudrun"
@@ -32,3 +17,22 @@ file = "main.py"
 [[ports]]
 localPort = 5004
 externalPort = 80
+
+[[ports]]
+localPort = 5005
+externalPort = 3000
+
+[workflows]
+
+[[workflows.workflow]]
+name = "Executar Python "
+mode = "sequential"
+author = 54046000
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3 main.py"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Executar Python "

@@ -2,8 +2,13 @@ from flask import Flask, render_template, request, send_from_directory
 import os
 import sqlite3
 import requests
+import json
+
+from google import genai
+from google.genai import types
 
 app = Flask(__name__)
+print("foi")
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -47,17 +52,67 @@ def adicionar_localizacao():
 
 
 def analisar_imagem_com_ia(caminho_imagem):
-    """
-    IA temporariamente desativada.
-    Quando tivermos uma API configurada, colocaremos
-    a análise da imagem aqui.
-    """
-    return (
-        50,
-        "Risco Moderado",
-        "Análise por IA indisponível no momento. "
-        "Análise manual necessária."
-    )
+    print("GEMINI FOI CHAMADA!")
+    
+    chave = os.getenv("GEMINI_API_KEY")
+
+    if not chave:
+        return "Chave da IA não encontrada."
+
+    try:
+        client = genai.Client(api_key=chave)
+
+        with open(caminho_imagem, "rb") as arquivo:
+            imagem = arquivo.read()
+
+        prompt = """
+Analise esta imagem para o BioGlow Watch.
+
+Identifique somente sinais VISÍVEIS relacionados ao ambiente:
+
+- rachaduras
+- erosão
+- água acumulada ou alagamento
+- falta de vegetação
+- sinais visíveis de deslizamento
+
+Responda em JSON:
+
+{
+  "rachadura": true,
+  "erosao": false,
+  "agua": false,
+  "falta_vegetacao": false,
+  "deslizamento": false,
+  "observacao": "descrição curta"
+}
+
+Use true somente quando o sinal estiver visível.
+Use false quando não estiver visível.
+Não invente informações.
+"""
+
+        resposta = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=[
+                types.Part.from_bytes(
+                    data=imagem,
+                    mime_type="image/webp"
+                ),
+                prompt
+            ],  # ty:ignore[invalid-argument-type]
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        )
+
+        dados = json.loads(resposta.text)
+
+        return dados["observacao"]
+
+    except Exception as e:
+        print(f"ERRO COMPLETO DO GEMINI:{repr(e)}")
+        raise
 
 
 def obter_clima(lat=-22.28, lon=-42.53):
@@ -195,7 +250,9 @@ def inicio():
 
 @app.route("/nova-ocorrencia", methods=["GET", "POST"])
 def nova_ocorrencia():
+    print("OCORRENCIA CHAMADA")
 
+    
     if request.method == "POST":
 
         tipo = request.form["tipo"]
@@ -212,7 +269,7 @@ def nova_ocorrencia():
 
         foto.save(caminho_foto)
 
-        risco, nivel, parecer_ia = analisar_imagem_com_ia(
+        parecer_ia = analisar_imagem_com_ia(
             caminho_foto
         )
 
@@ -248,9 +305,7 @@ def nova_ocorrencia():
             descricao=descricao_final,
             foto=foto.filename,
             latitude=latitude,
-            longitude=longitude,
-            risco=risco,
-            nivel=nivel
+            longitude=longitude
         )
 
     return render_template("nova-ocorrencia.html")
@@ -292,6 +347,6 @@ if __name__ == "__main__":
 
     app.run(
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5004)),
+        port=int(os.environ.get("PORT", 5005)),
         debug=False
     )
