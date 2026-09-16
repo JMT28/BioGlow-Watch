@@ -1,21 +1,30 @@
 {
   "name": "BioGlow Watch",
   "short_name": "BioGlow",
+  "description": "Sistema de monitoramento e registro de emergencias ambientais BioGlow.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#000010",
+  "background_color": "#000025",
   "theme_color": "#000025",
   "orientation": "portrait",
   "icons": [
     {
       "src": "/static/logotipo.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/static/logotipo.png",
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
