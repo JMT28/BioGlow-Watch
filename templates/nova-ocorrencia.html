@@ -3,11 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <title>Nova ocorrência - BioGlow Watch</title>
+    <style>
+        label{
+            color: #ffffff;
+        }
+    </style>
+    <style>
+        select {
+            background-color: #000055; /* Cor de fundo */
+            color: #ffffff;            /* Cor do texto */
+            padding: 8px 12px;         /* Espaçamento interno */
+            border: 1px solid #444;    
+            border-radius: 6px;        
+            font-size: 14px;
+        }
+
+        /* Estilizando as opções dentro do menu */
+        select option {
+            background-color: #222222; /* Fundo das opções */
+            color: #ffffff;            /* Texto das opções */
+        }
+    </style>
+    <style>
+        button  {
+            background-color: #000055; /* Cor de fundo */
+                color: #ffffff;            /* Cor do texto */
+                padding: 8px 12px;         /* Espaçamento interno */
+                border: 1px solid #444;    
+                border-radius: 6px;        
+                font-size: 14px;
+            }
+    </style>
+    <style>
+        input  {
+            background-color: #000055; /* Cor de fundo */
+                color: #ffffff;            /* Cor do texto */
+                padding: 8px 12px;         /* Espaçamento interno */
+                border: 1px solid #444;    
+                border-radius: 6px;        
+                font-size: 14px;
+            }
+    </style>
+    <style>
+        input  {
+            background-color: #000055; /* Cor de fundo */
+                color: #ffffff;            /* Cor do texto */
+                padding: 8px 12px;         /* Espaçamento interno */
+                border: 1px solid #444;    
+                border-radius: 6px;        
+                font-size: 14px;
+            }
+    </style>
+    <style>
+        textarea  {
+            background-color: #000055; /* Cor de fundo */
+                color: #ffffff;            /* Cor do texto */
+                padding: 8px 12px;         /* Espaçamento interno */
+                border: 1px solid #444;    
+                border-radius: 6px;        
+                font-size: 14px;
+            }
+    </style>
+    <style>
+        input  {
+            background-color: #000055; /* Cor de fundo */
+                color: #ffffff;            /* Cor do texto */
+                padding: 8px 12px;         /* Espaçamento interno */
+                border: 1px solid #444;    
+                border-radius: 6px;        
+                font-size: 14px;
+            }
+    </style>
+    <style>
+        input  {
+            background-color: #000055; /* Cor de fundo */
+                color: #ffffff;            /* Cor do texto */
+                padding: 8px 12px;         /* Espaçamento interno */
+                border: 1px solid #444;    
+                border-radius: 6px;        
+                font-size: 14px;
+            }
+    </style>
+    
 </head>
 
-<body>
-
-    <h1>Nova ocorrência</h1>
+<body style="background-color: #000025;">
+    <h1 style="color: #ffffff;">Nova ocorrência</h1>
 
     <form action="/nova-ocorrencia" method="POST" enctype="multipart/form-data">
         <input type="hidden" id="latitude" name="latitude">
@@ -31,7 +112,8 @@
 
         <label for="foto">Foto:</label>
         <input type="file" id="foto" name="foto" accept="image/*">
-        <p id="status-localizacao">Obtendo localização...</p>
+        
+        <p style="color: #ffffff;" id="status-localizacao">Obtendo localização...</p>
         <br><br>
 
 <button type="submit">Registrar ocorrência</button>
@@ -68,7 +150,26 @@
                 "⚠️ Este navegador não suporta localização.";
 
         }
+    
+    </script>
+    <script>
+        function validarCampos(event) {
+            const foto = document.getElementById('fotoInput');
+            const descricao = document.getElementById('descricaoInput');
 
+            // Verifica se a descrição está vazia (ignorando espaços em branco) ou se nenhum arquivo foi selecionado
+            if (descricao.value.trim() === "" || foto.files.length === 0) {
+                // Impede o envio do formulário
+                event.preventDefault(); 
+
+                // Exibe o aviso
+                alert("⚠️ Por favor, preencha a descrição e selecione uma foto antes de registrar!");
+                return false;
+            }
+
+            // Se estiver tudo preenchido, o formulário é enviado normalmente
+            return true;
+        }
     </script>
 </body>
 </html>

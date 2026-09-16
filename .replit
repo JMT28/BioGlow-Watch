@@ -20,14 +20,6 @@ args = "python3 main.py"
 task = "workflow.run"
 args = "Executar Python"
 
-[[ports]]
-localPort = 5003
-externalPort = 80
-
-[[ports]]
-localPort = 5004
-externalPort = 3000
-
 [deployment]
 deploymentTarget = "cloudrun"
 
@@ -36,3 +28,7 @@ args = ["sh", "-c", "/nix/store/s4ckxp77ljlikarkka88ba7qr5mlka97-python3-wrapper
 
 [deployment.run.env]
 file = "main.py"
+
+[[ports]]
+localPort = 5004
+externalPort = 80

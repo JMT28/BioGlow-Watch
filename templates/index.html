@@ -2,6 +2,11 @@
 <html lang="pt-br">
 
 <head>
+    <!-- Tag do Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+    <!-- Configuração de cor para o navegador do celular -->
+    <meta name="theme-color" content="#000025">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Início - BioGlow Watch</title>
@@ -124,7 +129,7 @@
 
         .retanguloabaixo {
             height: 220px;
-            width: 500px;
+            width: 100%;
             right: 10px;
             bottom: 5px;
             background-color: #000025;
@@ -139,7 +144,7 @@
 
         .retanguloacima {
             height: 220px;
-            width: 450px;
+            width: 100%;
             right: 0px;
             bottom: 450px;
             background-color: #000025;

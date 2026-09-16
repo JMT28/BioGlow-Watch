@@ -2,37 +2,48 @@
 <html lang="pt-BR">
 
 <head>
+    <style>
+        button{
+            background-color: #000055; /* Cor de fundo */
+                    color: #ffffff;            /* Cor do texto */
+                    padding: 8px 12px;         
+                    border: 1px solid #444;    
+                    border-radius: 6px;        
+                    font-size: 14px;
+    }
+    </style>
+    
     <meta charset="UTF-8">
     <title>Ocorrência registrada - BioGlow Watch</title>
 </head>
 
-<body>
+    <body style="background-color: #000025;">
 
-    <h1> Ocorrência registrada!</h1>
+        <h1 style="color: #ffffff;">Ocorrência registrada!</h1>
 
-    <h2>Dados da ocorrência</h2>
+    <h2 style="color:#ffffff;">Dados da ocorrência</h2>
 
-    <p><strong>Tipo:</strong> {{ tipo }}</p>
+    <p style="color:#ffffff;"><strong>Tipo:</strong> {{ tipo }}</p>
 
-    <p><strong>Descrição:</strong> {{ descricao }}</p>
+    <p style="color:#ffffff;"><strong>Descrição:</strong> {{ descricao }}</p>
 
-    <p><strong>Localização:</strong></p>
-    <p>Latitude: {{ latitude }}</p>
-    <p>Longitude: {{ longitude }}</p>
+    <p style="color:#ffffff;"><strong>Localização:</strong></p>
+    <p style="color:#ffffff;">Latitude: {{ latitude }}</p>
+    <p style="color:#ffffff;">Longitude: {{ longitude }}</p>
 
-    <h2>⚠️ Risco:{{ risco }}/100</h2>
-    <p>{{nivel}}</p>
+    <h2 style="color:#ffffff;">⚠️ Risco:{{ risco }}/100</h2>
+    <p style="color:#ffffff;">{{nivel}}</p>
 
 
-    <h2> Foto</h2>
+    <h2 style="color:#ffffff;"> Foto</h2>
 
-    <p>Arquivo: {{ foto }}</p>
-<img src="/uploads/{{ foto }}" width="400px">
+    
+<img src="/uploads/{{ foto }}" width="300px">
 
     <br>
 
     <a href="/">
-        <button>Voltar para o menu</button>
+        <button style>Voltar para o menu</button>
     </a>
 
 </body>
