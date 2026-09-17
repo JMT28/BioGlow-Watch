@@ -307,39 +307,41 @@ def nova_ocorrencia():
         latitude = request.form.get("latitude")
         longitude = request.form.get("longitude")
 
-        # 1. Monta o caminho e salva a imagem corretamente
+        # 1. Salva a foto
         caminho_foto = os.path.join(UPLOAD_FOLDER, foto.filename)
         foto.save(caminho_foto)
 
-        # 2. Executa a análise da imagem usando a IA do Gemini
+        # 2. Chama a IA do Gemini
         resultado_ia = analisar_imagem_com_ia(caminho_foto)
         nivel_risco = resultado_ia.get("risco", 0)
         observacao_ia = resultado_ia.get("observacao", "")
 
-        # 3. Salva os dados da ocorrência no banco de dados SQLite
+        # Junta a observação da IA na descrição
+        descricao_final = f"{descricao_usuario} (Obs IA: {observacao_ia})"
+
+        # 3. Insere apenas nas colunas existentes no banco
         conexao = sqlite3.connect("bioglow.db")
         cursor = conexao.cursor()
         cursor.execute(
             """
-            INSERT INTO ocorrencias (tipo, descricao, foto, latitude, longitude, risco, observacao_ia)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO ocorrencias (tipo, descricao, foto, latitude, longitude)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (tipo, descricao_usuario, foto.filename, latitude, longitude, nivel_risco, observacao_ia)
+            (tipo, descricao_final, foto.filename, latitude, longitude)
         )
         conexao.commit()
 
-        # 4. Consulta a quantidade atual de registros para a regra do alerta
+        # 4. Checa total de registros e dispara o alerta se necessário
         total_ocorrencias = cursor.execute("SELECT COUNT(*) FROM ocorrencias").fetchone()[0]
         conexao.close()
 
-        # 5. Se atingiu o nível de emergência, dispara o alerta via OneSignal
         if total_ocorrencias > 7 or nivel_risco >= 80:
-            msg = f"Atenção! Uma nova ocorrência de {tipo} foi registrada. O nível da região mudou para EMERGÊNCIA."
+            msg = f"Atenção! Nova ocorrência de {tipo}. Região em estado de EMERGÊNCIA."
             disparar_alerta_emergencia(msg)
 
         return redirect(url_for("index"))
 
-    return render_template("nova-ocorrencia.html")
+    return render_template("nova_ocorrencia.html")
 
 
 @app.route("/ocorrencias")
