@@ -300,7 +300,6 @@ def nova_ocorrencia():
     print("OCORRENCIA CHAMADA")
 
     if request.method == "POST":
-
         tipo = request.form["tipo"]
         descricao_usuario = request.form["descricao"]
         foto = request.files["foto"]
@@ -308,62 +307,39 @@ def nova_ocorrencia():
         latitude = request.form.get("latitude")
         longitude = request.form.get("longitude")
 
-        caminho_foto = os.path.join(
-            UPLOAD_FOLDER,
-            foto.filename
-        # Consulta a quantidade atual de registros
-total_ocorrencias = cursor.execute("SELECT COUNT(*) FROM ocorrencias").fetchone()[0]
-
-# Se atingiu o nível de emergência (exemplo: mais de 7 registros ou risco alto retornado pela IA)
-if total_ocorrencias > 7 or nivel_risco >= 80:
-    msg = f"Atenção! Uma nova ocorrência de {tipo} foi registrada. O nível da região mudou para EMERGÊNCIA."
-    disparar_alerta_emergencia(msg)
-        )
-
+        # 1. Monta o caminho e salva a imagem corretamente
+        caminho_foto = os.path.join(UPLOAD_FOLDER, foto.filename)
         foto.save(caminho_foto)
 
+        # 2. Executa a análise da imagem usando a IA do Gemini
         resultado_ia = analisar_imagem_com_ia(caminho_foto)
-
-        parecer_ia = resultado_ia.get("observacao", "")
         nivel_risco = resultado_ia.get("risco", 0)
+        observacao_ia = resultado_ia.get("observacao", "")
 
-        descricao_final = (
-            f"{descricao_usuario} "
-            f"(IA: {parecer_ia})"
-        )
-
+        # 3. Salva os dados da ocorrência no banco de dados SQLite
         conexao = sqlite3.connect("bioglow.db")
         cursor = conexao.cursor()
-
         cursor.execute(
             """
-            INSERT INTO ocorrencias
-            (tipo, descricao, foto, latitude, longitude)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO ocorrencias (tipo, descricao, foto, latitude, longitude, risco, observacao_ia)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (
-                tipo,
-                descricao_final,
-                foto.filename,
-                latitude,
-                longitude
-            )
+            (tipo, descricao_usuario, foto.filename, latitude, longitude, nivel_risco, observacao_ia)
         )
-
         conexao.commit()
+
+        # 4. Consulta a quantidade atual de registros para a regra do alerta
+        total_ocorrencias = cursor.execute("SELECT COUNT(*) FROM ocorrencias").fetchone()[0]
         conexao.close()
 
-        return render_template(
-            "resultado.html",
-            tipo=tipo,
-            descricao=descricao_final,
-            foto=foto.filename,
-            latitude=latitude,
-            longitude=longitude, 
-            risco=nivel_risco
-        )
+        # 5. Se atingiu o nível de emergência, dispara o alerta via OneSignal
+        if total_ocorrencias > 7 or nivel_risco >= 80:
+            msg = f"Atenção! Uma nova ocorrência de {tipo} foi registrada. O nível da região mudou para EMERGÊNCIA."
+            disparar_alerta_emergencia(msg)
 
-    return render_template("nova-ocorrencia.html")
+        return redirect(url_for("index"))
+
+    return render_template("nova_ocorrencia.html")
 
 
 @app.route("/ocorrencias")
