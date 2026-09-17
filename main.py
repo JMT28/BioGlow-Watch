@@ -311,6 +311,13 @@ def nova_ocorrencia():
         caminho_foto = os.path.join(
             UPLOAD_FOLDER,
             foto.filename
+        # Consulta a quantidade atual de registros
+total_ocorrencias = cursor.execute("SELECT COUNT(*) FROM ocorrencias").fetchone()[0]
+
+# Se atingiu o nível de emergência (exemplo: mais de 7 registros ou risco alto retornado pela IA)
+if total_ocorrencias > 7 or nivel_risco >= 80:
+    msg = f"Atenção! Uma nova ocorrência de {tipo} foi registrada. O nível da região mudou para EMERGÊNCIA."
+    disparar_alerta_emergencia(msg)
         )
 
         foto.save(caminho_foto)
