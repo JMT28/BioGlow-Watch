@@ -126,7 +126,7 @@ Responda EXCLUSIVAMENTE em formato JSON:
     for tentativa in range(tentativas):
         try:
             resposta = client.models.generate_content(
-                model="gemini-3.6-flash",
+                model="gemini-2.5-flash",
                 contents=[
                     types.Part.from_bytes(
                         data=imagem,
@@ -266,6 +266,9 @@ def inicio():
         ocorrencias=ocorrencias
     )
 
+@app.route("/OneSignalSDKWorker.js")
+def onesignal_worker():
+    return send_from_directory("static", "OneSignalSDKWorker.js")
 
 @app.route("/nova-ocorrencia", methods=["GET", "POST"])
 def nova_ocorrencia():
