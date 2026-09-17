@@ -80,7 +80,6 @@ def adicionar_localizacao():
     conexao.commit()
     conexao.close()
 
-
 def analisar_imagem_com_ia(caminho_imagem):
     print("GEMINI FOI CHAMADA!", flush=True)
 
@@ -123,10 +122,11 @@ Responda EXCLUSIVAMENTE em formato JSON:
 """
 
     try:
-        # Chamada única com timeout de 12 segundos via HttpOptions
-        resposta = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=[
+        # Utiliza o envio via chat conforme recomendado pelo SDK
+        chat = client.chats.create(model="gemini-3.6-flash")
+        
+        resposta = chat.send_message(
+            message=[
                 types.Part.from_bytes(
                     data=imagem,
                     mime_type=mime_type
@@ -135,7 +135,7 @@ Responda EXCLUSIVAMENTE em formato JSON:
             ],
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                http_options=types.HttpOptions(timeout=12000)  # Timeout em milissegundos (12s)
+                http_options=types.HttpOptions(timeout=12000)
             )
         )
 
@@ -143,12 +143,13 @@ Responda EXCLUSIVAMENTE em formato JSON:
         return dados
 
     except Exception as e:
-        print(f"Erro na análise por IA: {repr(e)}", flush=True)
-        # Fallback de segurança para garantir a execução sem travar o Flask
+        print(f"Erro na IA: {repr(e)}", flush=True)
+        # Retorna risco 75 durante instabilidades para acionar a notificação de emergência
         return {
-            "observacao": "Serviço de IA indisponível ou limite de cota atingido.",
-            "risco": 0
+            "observacao": "Modo de contingência (Instabilidade temporária na IA)",
+            "risco": 75
         }
+
 
 def obter_clima(lat=-22.28, lon=-42.53):
     try:
