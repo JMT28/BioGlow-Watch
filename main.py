@@ -3,9 +3,11 @@ import os
 import sqlite3
 import requests
 import json
+import mimetypes
 
 from google import genai
 from google.genai import types
+import math
 
 app = Flask(__name__)
 print("foi")
@@ -50,76 +52,86 @@ def adicionar_localizacao():
     conexao.commit()
     conexao.close()
 
+import time
+import mimetypes
+import json
+import os
+from google import genai
+from google.genai import types
 
 def analisar_imagem_com_ia(caminho_imagem):
     print("GEMINI FOI CHAMADA!", flush=True)
-    
+
     chave = os.getenv("GEMINI_API_KEY")
 
     if not chave:
-        return "Chave da IA não encontrada."
+        return {"observacao": "Chave da IA não encontrada.", "risco": 0}
 
-    try:
-        client = genai.Client(api_key=chave)
+    client = genai.Client(api_key=chave)
 
-        with open(caminho_imagem, "rb") as arquivo:
-            imagem = arquivo.read()
+    mime_type, _ = mimetypes.guess_type(caminho_imagem)
+    if not mime_type:
+        mime_type = "image/webp"
 
-        prompt = """
+    with open(caminho_imagem, "rb") as arquivo:
+        imagem = arquivo.read()
+
+    prompt = """
 Analise esta imagem para o BioGlow Watch.
 
 Identifique somente sinais VISÍVEIS relacionados ao ambiente:
-
 - rachaduras
 - erosão
 - água acumulada ou alagamento
 - falta de vegetação
 - sinais visíveis de deslizamento
 
-Responda em JSON:
+Calcule uma nota de risco ambiental numérico de 0 a 100 baseando-se na gravidade dos problemas encontrados (0 = sem perigo, 100 = risco extremo de desastre).
 
+Responda EXCLUSIVAMENTE em formato JSON:
 {
-  "rachadura": true,
+  "rachadura": false,
   "erosao": false,
   "agua": false,
   "falta_vegetacao": false,
   "deslizamento": false,
-  "observacao": "descrição curta"
+  "observacao": "descrição curta",
+  "risco": 50
 }
-
-Use true somente quando o sinal estiver visível.
-Use false quando não estiver visível.
-Não invente informações.
 """
 
-        resposta = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=[
-                types.Part.from_bytes(
-                    data=imagem,
-                    mime_type="image/webp"
-                ),
-                prompt
-            ],  # ty:ignore[invalid-argument-type]
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json"
+    # Tenta até 3 vezes em caso de erro 503 (Servidor Ocupado)
+    tentativas = 3
+    for tentativa in range(tentativas):
+        try:
+            resposta = client.models.generate_content(
+                model="gemini-3.6-flash",
+                contents=[
+                    types.Part.from_bytes(
+                        data=imagem,
+                        mime_type=mime_type
+                    ),
+                    prompt
+                ],
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json"
+                )
             )
-        )
 
-        dados = json.loads(resposta.text)
+            dados = json.loads(resposta.text)
+            return dados
 
-        return dados["observacao"]
-
-    except Exception as e:
-        print(f"ERRO COMPLETO DO GEMINI:{repr(e)}")
-        raise
-
+        except Exception as e:
+            print(f"Tentativa {tentativa + 1} falhou. Erro: {repr(e)}")
+            if tentativa < tentativas - 1:
+                time.sleep(2)  # Aguarda 2 segundos antes de tentar novamente
+            else:
+                return {
+                    "observacao": "Serviço de IA instável no momento. Tente novamente em instantes.",
+                    "risco": 0
+                }
 
 def obter_clima(lat=-22.28, lon=-42.53):
-    """
-    Busca a condição meteorológica atual
-    através da API Open-Meteo.
-    """
     try:
         url = (
             "https://api.open-meteo.com/v1/forecast"
@@ -200,8 +212,7 @@ def inicio():
             t[0],
             t[0].capitalize()
         )
-        for t in tipos_registrados
-    ]
+        for t in tipos_registrados]
 
     if total <= 2:
         status = "Baixo risco"
@@ -252,7 +263,6 @@ def inicio():
 def nova_ocorrencia():
     print("OCORRENCIA CHAMADA")
 
-    
     if request.method == "POST":
 
         tipo = request.form["tipo"]
@@ -269,9 +279,10 @@ def nova_ocorrencia():
 
         foto.save(caminho_foto)
 
-        parecer_ia = analisar_imagem_com_ia(
-            caminho_foto
-        )
+        resultado_ia = analisar_imagem_com_ia(caminho_foto)
+
+        parecer_ia = resultado_ia.get("observacao", "")
+        nivel_risco = resultado_ia.get("risco", 0)
 
         descricao_final = (
             f"{descricao_usuario} "
@@ -305,7 +316,8 @@ def nova_ocorrencia():
             descricao=descricao_final,
             foto=foto.filename,
             latitude=latitude,
-            longitude=longitude
+            longitude=longitude, 
+            risco=nivel_risco
         )
 
     return render_template("nova-ocorrencia.html")
@@ -347,6 +359,6 @@ if __name__ == "__main__":
 
     app.run(
         host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5006)),
+        port=int(os.environ.get("PORT", 5001)),
         debug=False
     )

@@ -15,12 +15,8 @@ args = ["sh", "-c", "/nix/store/s4ckxp77ljlikarkka88ba7qr5mlka97-python3-wrapper
 file = "main.py"
 
 [[ports]]
-localPort = 5004
+localPort = 5001
 externalPort = 80
-
-[[ports]]
-localPort = 5005
-externalPort = 3000
 
 [[ports]]
 localPort = 5006
@@ -35,3 +31,7 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python3 -u main.py"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Executar Python"
