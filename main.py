@@ -20,6 +20,38 @@ def criar_banco():
     conexao = sqlite3.connect("bioglow.db")
     cursor = conexao.cursor()
 
+ONESIGNAL_APP_ID = os.getenv("ONESIGNAL_APP_ID")
+ONESIGNAL_REST_KEY = os.getenv("ONESIGNAL_REST_KEY")
+
+def disparar_alerta_emergencia(mensagem):
+    if not ONESIGNAL_APP_ID or not ONESIGNAL_REST_KEY:
+        print("Chaves do OneSignal não configuradas.")
+        return
+
+    headers = {
+        "Content-Type": "application/json; charset=utf-8",
+        "Authorization": f"Basic {ONESIGNAL_REST_KEY}"
+    }
+
+    payload = {
+        "app_id": ONESIGNAL_APP_ID,
+        "included_segments": ["All"], # Envia para todos os inscritos
+        "headings": {"pt": "⚠️ ALERTA DE EMERGÊNCIA - BIOGLOW"},
+        "contents": {"pt": mensagem},
+        "chrome_web_icon": "https://seu-app.onrender.com/static/logotipo2.png"
+    }
+
+    try:
+        resposta = requests.post(
+            "https://onesignal.com/api/v1/notifications",
+            headers=headers,
+            data=json.dumps(payload),
+            timeout=10
+        )
+        print(f"Notificação disparada: {resposta.status_code} - {resposta.text}")
+    except Exception as e:
+        print(f"Erro ao enviar notificação OneSignal: {e}")
+    
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ocorrencias (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
