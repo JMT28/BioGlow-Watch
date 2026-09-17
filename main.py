@@ -339,7 +339,7 @@ def nova_ocorrencia():
 
         return redirect(url_for("index"))
 
-    return render_template("nova_ocorrencia.html")
+    return render_template("nova-ocorrencia.html")
 
 
 @app.route("/ocorrencias")
