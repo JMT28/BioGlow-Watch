@@ -122,36 +122,33 @@ Responda EXCLUSIVAMENTE em formato JSON:
 }
 """
 
-    tentativas = 3
-    for tentativa in range(tentativas):
-        try:
-            resposta = client.models.generate_content(
-                model="gemini-3.6-flash",
-                contents=[
-                    types.Part.from_bytes(
-                        data=imagem,
-                        mime_type=mime_type
-                    ),
-                    prompt
-                ],
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json"
-                )
+    try:
+        # Chamada única com timeout de 12 segundos via HttpOptions
+        resposta = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=[
+                types.Part.from_bytes(
+                    data=imagem,
+                    mime_type=mime_type
+                ),
+                prompt
+            ],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                http_options=types.HttpOptions(timeout=12000)  # Timeout em milissegundos (12s)
             )
+        )
 
-            dados = json.loads(resposta.text)
-            return dados
+        dados = json.loads(resposta.text)
+        return dados
 
-        except Exception as e:
-            print(f"Tentativa {tentativa + 1} falhou. Erro: {repr(e)}")
-            if tentativa < tentativas - 1:
-                time.sleep(2)
-            else:
-                return {
-                    "observacao": "Serviço de IA instável no momento.",
-                    "risco": 0
-                }
-
+    except Exception as e:
+        print(f"Erro na análise por IA: {repr(e)}", flush=True)
+        # Fallback de segurança para garantir a execução sem travar o Flask
+        return {
+            "observacao": "Serviço de IA indisponível ou limite de cota atingido.",
+            "risco": 0
+        }
 
 def obter_clima(lat=-22.28, lon=-42.53):
     try:
