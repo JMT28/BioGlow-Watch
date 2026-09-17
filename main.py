@@ -166,6 +166,10 @@ def obter_clima(lat=-22.28, lon=-42.53):
         return "🌧️<br> Indisponível"
 
 
+@app.route("/OneSignalSDKWorker.js")
+def onesignal_worker():
+    return send_from_directory("static", "OneSignalSDKWorker.js")
+
 @app.route("/")
 def inicio():
     conexao = sqlite3.connect("bioglow.db")
