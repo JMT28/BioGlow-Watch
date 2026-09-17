@@ -1,12 +1,11 @@
-from flask import Flask, render_template, request, send_from_directory, redirect, url_for
-import os
-import sqlite3
-import requests
-import json
 import mimetypes
+import os
+import json
+import sqlite3
 import time
 import math
-
+import requests
+from flask import Flask, render_template, request, send_from_directory, redirect, url_for
 from google import genai
 from google.genai import types
 
@@ -20,38 +19,9 @@ ONESIGNAL_APP_ID = os.getenv("ONESIGNAL_APP_ID")
 ONESIGNAL_REST_KEY = os.getenv("ONESIGNAL_REST_KEY")
 
 
-def criar_banco():
-    conexao = sqlite3.connect("bioglow.db")
-    cursor = conexao.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS ocorrencias (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tipo TEXT NOT NULL,
-            descricao TEXT,
-            foto TEXT,
-            latitude REAL,
-            longitude REAL
-        )
-    """)
-    conexao.commit()
-    conexao.close()
-
-
-def adicionar_localizacao():
-    conexao = sqlite3.connect("bioglow.db")
-    cursor = conexao.cursor()
-    try:
-        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN latitude REAL")
-        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN longitude REAL")
-    except sqlite3.OperationalError:
-        pass
-    conexao.commit()
-    conexao.close()
-
-
 def disparar_alerta_emergencia(mensagem):
     if not ONESIGNAL_APP_ID or not ONESIGNAL_REST_KEY:
-        print("Chaves do OneSignal não configuradas.")
+        print("Erro: Chaves do OneSignal não foram encontradas nos Secrets.")
         return
 
     headers = {
@@ -62,9 +32,8 @@ def disparar_alerta_emergencia(mensagem):
     payload = {
         "app_id": ONESIGNAL_APP_ID,
         "included_segments": ["All"],  # Envia para todos os inscritos
-        "headings": {"pt": "⚠️ ALERTA DE EMERGÊNCIA - BIOGLOW"},
-        "contents": {"pt": mensagem},
-        "chrome_web_icon": "https://bioglow-watch.onrender.com/static/logotipo2.png"
+        "headings": {"pt":"⚠️ ALERTA DE EMERGÊNCIA - BIOGLOW"},
+        "contents": {"pt": mensagem}
     }
 
     try:
@@ -74,9 +43,42 @@ def disparar_alerta_emergencia(mensagem):
             data=json.dumps(payload),
             timeout=10
         )
-        print(f"Notificação disparada: {resposta.status_code} - {resposta.text}")
+        print(f"Status do envio: {resposta.status_code}")
     except Exception as e:
-        print(f"Erro ao enviar notificação OneSignal: {e}")
+        print(f"Erro ao disparar notificação: {e}")
+
+
+def criar_banco():
+    conexao = sqlite3.connect("bioglow.db")
+    cursor = conexao.cursor()
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ocorrencias (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo TEXT NOT NULL,
+            descricao TEXT,
+            foto TEXT,
+            latitude REAL,
+            longitude REAL
+        )
+    """)
+
+    conexao.commit()
+    conexao.close()
+
+
+def adicionar_localizacao():
+    conexao = sqlite3.connect("bioglow.db")
+    cursor = conexao.cursor()
+
+    try:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN latitude REAL")
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN longitude REAL")
+    except sqlite3.OperationalError:
+        pass
+
+    conexao.commit()
+    conexao.close()
 
 
 def analisar_imagem_com_ia(caminho_imagem):
@@ -146,7 +148,7 @@ Responda EXCLUSIVAMENTE em formato JSON:
                 time.sleep(2)
             else:
                 return {
-                    "observacao": "Serviço de IA instável no momento. Tente novamente em instantes.",
+                    "observacao": "Serviço de IA instável no momento.",
                     "risco": 0
                 }
 
@@ -182,29 +184,19 @@ def obter_clima(lat=-22.28, lon=-42.53):
         return "🌧️<br> Indisponível"
 
 
-@app.route("/OneSignalSDKWorker.js")
-def onesignal_worker():
-    return send_from_directory("static", "OneSignalSDKWorker.js")
-
-
 @app.route("/")
 def inicio():
     conexao = sqlite3.connect("bioglow.db")
 
-    total = conexao.execute(
-        "SELECT COUNT(*) FROM ocorrencias"
-    ).fetchone()[0]
+    total = conexao.execute("SELECT COUNT(*) FROM ocorrencias").fetchone()[0]
 
-    ocorrencias = conexao.execute(
-        "SELECT * FROM ocorrencias"
-    ).fetchall()
+    ocorrencias = conexao.execute("SELECT * FROM ocorrencias").fetchall()
 
     tipos_registrados = conexao.execute(
         """
         SELECT DISTINCT tipo
         FROM ocorrencias
-        WHERE tipo IS NOT NULL
-        AND tipo != ''
+        WHERE tipo IS NOT NULL AND tipo != ''
         """
     ).fetchall()
 
@@ -229,11 +221,9 @@ def inicio():
     }
 
     lista_riscos = [
-        nomes_tipos.get(
-            t[0],
-            t[0].capitalize()
-        )
-        for t in tipos_registrados]
+        nomes_tipos.get(t[0], t[0].capitalize())
+        for t in tipos_registrados
+    ]
 
     if total <= 2:
         status = "Baixo risco"
@@ -289,42 +279,46 @@ def nova_ocorrencia():
         latitude = request.form.get("latitude")
         longitude = request.form.get("longitude")
 
-        # 1. Salva a foto
         caminho_foto = os.path.join(UPLOAD_FOLDER, foto.filename)
         foto.save(caminho_foto)
 
-        # 2. Chama a IA do Gemini
         resultado_ia = analisar_imagem_com_ia(caminho_foto)
+
+        parecer_ia = resultado_ia.get("observacao", "")
         nivel_risco = resultado_ia.get("risco", 0)
-        observacao_ia = resultado_ia.get("observacao", "")
 
-        # Junta a observação da IA na descrição
-        descricao_final = f"{descricao_usuario} (Obs IA: {observacao_ia})"
+        descricao_final = f"{descricao_usuario} (IA: {parecer_ia})"
 
-        # 3. Insere nas colunas padrão da tabela
         conexao = sqlite3.connect("bioglow.db")
         cursor = conexao.cursor()
+
         cursor.execute(
             """
-            INSERT INTO ocorrencias (tipo, descricao, foto, latitude, longitude)
+            INSERT INTO ocorrencias
+            (tipo, descricao, foto, latitude, longitude)
             VALUES (?, ?, ?, ?, ?)
             """,
             (tipo, descricao_final, foto.filename, latitude, longitude)
         )
-        conexao.commit()
 
-        # 4. Checa total de registros e dispara o alerta se necessário
-        total_ocorrencias = cursor.execute("SELECT COUNT(*) FROM ocorrencias").fetchone()[0]
+        conexao.commit()
         conexao.close()
 
-        if total_ocorrencias > 7 or nivel_risco >= 80:
-            msg = f"Atenção! Nova ocorrência de {tipo}. Região em estado de EMERGÊNCIA."
-            disparar_alerta_emergencia(msg)
+        # Envio do alerta de emergência no cadastro da ocorrência
+        if nivel_risco >= 70:
+            disparar_alerta_emergencia("Nova ocorrência de alto risco registrada na região!")
 
-        return redirect(url_for("inicio"))
+        return render_template(
+            "resultado.html",
+            tipo=tipo,
+            descricao=descricao_final,
+            foto=foto.filename,
+            latitude=latitude,
+            longitude=longitude,
+            risco=nivel_risco
+        )
 
-    # Verifica se o arquivo HTML se chama nova_ocorrencia.html
-    return render_template("nova_ocorrencia.html")
+    return render_template("nova-ocorrencia.html")
 
 
 @app.route("/ocorrencias")
@@ -332,24 +326,15 @@ def ocorrencias():
     conexao = sqlite3.connect("bioglow.db")
     conexao.row_factory = sqlite3.Row
 
-    ocorrencias = conexao.execute(
-        "SELECT * FROM ocorrencias"
-    ).fetchall()
-
+    ocorrencias_dados = conexao.execute("SELECT * FROM ocorrencias").fetchall()
     conexao.close()
 
-    return render_template(
-        "ocorrencias.html",
-        ocorrencias=ocorrencias
-    )
+    return render_template("ocorrencias.html", ocorrencias=ocorrencias_dados)
 
 
 @app.route("/uploads/<nome_arquivo>")
 def mostrar_foto(nome_arquivo):
-    return send_from_directory(
-        UPLOAD_FOLDER,
-        nome_arquivo
-    )
+    return send_from_directory(UPLOAD_FOLDER, nome_arquivo)
 
 
 @app.route("/mapa")
@@ -357,11 +342,10 @@ def mapa():
     return render_template("mapa.html")
 
 
-# Inicializa o banco de dados antes da aplicação rodar
-criar_banco()
-adicionar_localizacao()
-
 if __name__ == "__main__":
+    criar_banco()
+    adicionar_localizacao()
+
     app.run(
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 5001)),
