@@ -1,13 +1,14 @@
-from flask import Flask, render_template, request, send_from_directory
+from flask import Flask, render_template, request, send_from_directory, redirect, url_for
 import os
 import sqlite3
 import requests
 import json
 import mimetypes
+import time
+import math
 
 from google import genai
 from google.genai import types
-import math
 
 app = Flask(__name__)
 print("foi")
@@ -15,13 +16,38 @@ print("foi")
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+ONESIGNAL_APP_ID = os.getenv("ONESIGNAL_APP_ID")
+ONESIGNAL_REST_KEY = os.getenv("ONESIGNAL_REST_KEY")
+
 
 def criar_banco():
     conexao = sqlite3.connect("bioglow.db")
     cursor = conexao.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ocorrencias (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo TEXT NOT NULL,
+            descricao TEXT,
+            foto TEXT,
+            latitude REAL,
+            longitude REAL
+        )
+    """)
+    conexao.commit()
+    conexao.close()
 
-ONESIGNAL_APP_ID = os.getenv("ONESIGNAL_APP_ID")
-ONESIGNAL_REST_KEY = os.getenv("ONESIGNAL_REST_KEY")
+
+def adicionar_localizacao():
+    conexao = sqlite3.connect("bioglow.db")
+    cursor = conexao.cursor()
+    try:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN latitude REAL")
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN longitude REAL")
+    except sqlite3.OperationalError:
+        pass
+    conexao.commit()
+    conexao.close()
+
 
 def disparar_alerta_emergencia(mensagem):
     if not ONESIGNAL_APP_ID or not ONESIGNAL_REST_KEY:
@@ -35,10 +61,10 @@ def disparar_alerta_emergencia(mensagem):
 
     payload = {
         "app_id": ONESIGNAL_APP_ID,
-        "included_segments": ["All"], # Envia para todos os inscritos
+        "included_segments": ["All"],  # Envia para todos os inscritos
         "headings": {"pt": "⚠️ ALERTA DE EMERGÊNCIA - BIOGLOW"},
         "contents": {"pt": mensagem},
-        "chrome_web_icon": "https://seu-app.onrender.com/static/logotipo2.png"
+        "chrome_web_icon": "https://bioglow-watch.onrender.com/static/logotipo2.png"
     }
 
     try:
@@ -51,45 +77,7 @@ def disparar_alerta_emergencia(mensagem):
         print(f"Notificação disparada: {resposta.status_code} - {resposta.text}")
     except Exception as e:
         print(f"Erro ao enviar notificação OneSignal: {e}")
-    
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS ocorrencias (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tipo TEXT NOT NULL,
-            descricao TEXT,
-            foto TEXT,
-            latitude REAL,
-            longitude REAL
-        )
-    """)
 
-    conexao.commit()
-    conexao.close()
-
-
-def adicionar_localizacao():
-    conexao = sqlite3.connect("bioglow.db")
-    cursor = conexao.cursor()
-
-    try:
-        cursor.execute(
-            "ALTER TABLE ocorrencias ADD COLUMN latitude REAL"
-        )
-        cursor.execute(
-            "ALTER TABLE ocorrencias ADD COLUMN longitude REAL"
-        )
-    except sqlite3.OperationalError:
-        pass
-
-    conexao.commit()
-    conexao.close()
-
-import time
-import mimetypes
-import json
-import os
-from google import genai
-from google.genai import types
 
 def analisar_imagem_com_ia(caminho_imagem):
     print("GEMINI FOI CHAMADA!", flush=True)
@@ -132,7 +120,6 @@ Responda EXCLUSIVAMENTE em formato JSON:
 }
 """
 
-    # Tenta até 3 vezes em caso de erro 503 (Servidor Ocupado)
     tentativas = 3
     for tentativa in range(tentativas):
         try:
@@ -156,12 +143,13 @@ Responda EXCLUSIVAMENTE em formato JSON:
         except Exception as e:
             print(f"Tentativa {tentativa + 1} falhou. Erro: {repr(e)}")
             if tentativa < tentativas - 1:
-                time.sleep(2)  # Aguarda 2 segundos antes de tentar novamente
+                time.sleep(2)
             else:
                 return {
                     "observacao": "Serviço de IA instável no momento. Tente novamente em instantes.",
                     "risco": 0
                 }
+
 
 def obter_clima(lat=-22.28, lon=-42.53):
     try:
@@ -180,16 +168,12 @@ def obter_clima(lat=-22.28, lon=-42.53):
 
         if codigo_tempo in [0, 1]:
             return "☀️<br> Ensolarado"
-
         elif codigo_tempo in [2, 3]:
             return "☁️<br> Nublado"
-
         elif codigo_tempo in [51, 53, 55, 61, 63, 80]:
             return "🌧️<br> Chovendo"
-
         elif codigo_tempo in [65, 81, 82, 95, 96, 99]:
             return "⛈️<br> Chuva Forte"
-
         else:
             return "🌤️<br> Parcialmente Nublado"
 
@@ -201,6 +185,7 @@ def obter_clima(lat=-22.28, lon=-42.53):
 @app.route("/OneSignalSDKWorker.js")
 def onesignal_worker():
     return send_from_directory("static", "OneSignalSDKWorker.js")
+
 
 @app.route("/")
 def inicio():
@@ -253,15 +238,12 @@ def inicio():
     if total <= 2:
         status = "Baixo risco"
         cor_classe = "seguro"
-
     elif total <= 5:
         status = "Atenção"
         cor_classe = "atencao"
-
     elif total <= 7:
         status = "Alerta"
         cor_classe = "alerta"
-
     else:
         status = "Emergência"
         cor_classe = "emergencia"
@@ -319,7 +301,7 @@ def nova_ocorrencia():
         # Junta a observação da IA na descrição
         descricao_final = f"{descricao_usuario} (Obs IA: {observacao_ia})"
 
-        # 3. Insere apenas nas colunas existentes no banco
+        # 3. Insere nas colunas padrão da tabela
         conexao = sqlite3.connect("bioglow.db")
         cursor = conexao.cursor()
         cursor.execute(
@@ -339,8 +321,9 @@ def nova_ocorrencia():
             msg = f"Atenção! Nova ocorrência de {tipo}. Região em estado de EMERGÊNCIA."
             disparar_alerta_emergencia(msg)
 
-        return redirect(url_for("index"))
+        return redirect(url_for("inicio"))
 
+    # Verifica se o arquivo HTML se chama nova_ocorrencia.html
     return render_template("nova_ocorrencia.html")
 
 
@@ -374,10 +357,11 @@ def mapa():
     return render_template("mapa.html")
 
 
-if __name__ == "__main__":
-    criar_banco()
-    adicionar_localizacao()
+# Inicializa o banco de dados antes da aplicação rodar
+criar_banco()
+adicionar_localizacao()
 
+if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 5001)),
