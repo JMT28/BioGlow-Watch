@@ -14,10 +14,16 @@
     <!-- Tag do Manifest -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 
-    <!-- Configuração de cor para o navegador do celular -->
+    <!-- Meta Tags Específicas para iOS / Safari PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BioGlow Watch">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='logotipo.png') }}">
+
+    <!-- Configuração de cor e viewport para dispositivos móveis -->
     <meta name="theme-color" content="#000025">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Início  - BioGlow Watch</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -208,12 +214,15 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
+        let jaNotificou = false; // Trava para impedir disparos repetidos no Safari iOS
+
         // Função responsável por enviar a notificação para o sistema operacional / navegador
         function enviarNotificacaoAutomatica() {
             const statusAtual = "{{ status }}";
 
-            // Só dispara se o status vindo do Python/Flask for 'Emergência'
-            if (statusAtual === "Emergência") {
+            // Só dispara se o status for 'Emergência' e ainda não tiver disparado na sessão
+            if (statusAtual === "Emergência" && !jaNotificou) {
+                jaNotificou = true;
                 const titulo = "🚨 ALERTA DE EMERGÊNCIA - BioGlow";
                 const opcoes = {
                     body: "Atenção: A sua região atingiu o nível crítico de risco!",
@@ -234,14 +243,12 @@
             }
         }
 
-        // Execução Automática assim que o navegador lê o código
-        (function verificarEAtivarNotificacao() {
+        // Execução ao carregar a página
+        function verificarEAtivarNotificacao() {
             if ("Notification" in window) {
                 if (Notification.permission === "granted") {
-                    // Se já foi autorizado antes, dispara imediatamente sem clique
                     enviarNotificacaoAutomatica();
                 } else if (Notification.permission === "default") {
-                    // Se ainda não respondeu, solicita a permissão automaticamente
                     Notification.requestPermission().then(permission => {
                         if (permission === "granted") {
                             enviarNotificacaoAutomatica();
@@ -249,7 +256,17 @@
                     });
                 }
             }
-        })();
+        }
+
+        // Roda ao abrir a tela
+        verificarEAtivarNotificacao();
+
+        // Trata o retorno do foco do aplicativo no Safari/iOS para evitar acumulo de avisos
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                verificarEAtivarNotificacao();
+            }
+        });
 
         // Inicialização do Mapa Leaflet
         const mapa = L.map("mapa").setView([-22.28, -42.53], 13);
