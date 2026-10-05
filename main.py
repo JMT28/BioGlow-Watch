@@ -25,7 +25,8 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 ONESIGNAL_APP_ID = os.getenv("ONESIGNAL_APP_ID")
 ONESIGNAL_REST_KEY = os.getenv("ONESIGNAL_REST_KEY")
 
-
+if os.path.exists('bioglow.db'):
+    os.remove('bioglow.db')
 # ============================================================
 # BANCO DE DADOS
 # ============================================================
